@@ -21,11 +21,12 @@ const TOKEN_KEY = "cybercheck_token";
 const REFRESH_TOKEN_KEY = "cybercheck_refresh_token";
 const CSRF_TOKEN_KEY = "cybercheck_csrf_token";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Debugging
 if (import.meta.env.DEV) {
   console.log("Supabase URL:", SUPABASE_URL);
+  console.log("Supabase Key exists:", !!SUPABASE_ANON_KEY);
 }
 
 // Secure cookie functions for enhanced security
@@ -78,23 +79,20 @@ export async function secureFetch(url: string, options: RequestInit = {}) {
     headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
   }
 
-  // Add CSRF token for non-GET requests
-  if (options.method && options.method !== 'GET') {
-    headers['X-XSRF-TOKEN'] = getCSRFToken();
+  // Use session token if available (replaces anon key)
+  const session = getCurrentSession();
+  if (session?.token) {
+    headers['Authorization'] = `Bearer ${session.token}`;
   }
 
   try {
     const response = await fetch(url, { ...options, headers });
     
     // Auto-refresh token on 401
-    if (response.status === 401) {
+    if (response.status === 401 && !url.includes('/auth/login')) {
       const newToken = await refreshAccessToken();
       if (newToken) {
-        // Update authorization header with new token if it was a user session
-        const session = getCurrentSession();
-        if (session) {
-          headers['Authorization'] = `Bearer ${session.token}`;
-        }
+        headers['Authorization'] = `Bearer ${newToken}`;
         return fetch(url, { ...options, headers });
       }
     }
