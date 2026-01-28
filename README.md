@@ -36,6 +36,8 @@
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
 VITE_APP_URL=your_vercel_app_url
+VITE_ADMIN_LOGIN=AdminHusan
+VITE_ADMIN_PASSWORD=Husan0716
 ```
 
 ### ⚙️ Vercel Sozlamalari

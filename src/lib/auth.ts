@@ -446,8 +446,11 @@ export async function login(
   }
 
   try {
-    // Maxsus Admin logini (AdminHusan / Husan0716)
-    if (sanitizedLogin === "AdminHusan" && sanitizedPassword === "Husan0716") {
+    // Maxsus Admin logini (Environment Variables orqali)
+    const ADMIN_LOGIN = import.meta.env.VITE_ADMIN_LOGIN;
+    const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
+
+    if (ADMIN_LOGIN && ADMIN_PASSWORD && sanitizedLogin === ADMIN_LOGIN && sanitizedPassword === ADMIN_PASSWORD) {
       const adminUser: User = {
         id: "admin-husan-id",
         login: "AdminHusan",
@@ -539,10 +542,11 @@ export async function validateSession(): Promise<{ valid: boolean; user?: User; 
     return { valid: false };
   }
 
-  // AdminHusan uchun sessiyani validatsiya qilish
+  // Admin uchun sessiyani validatsiya qilish
   if (token.startsWith("admin-static-token-")) {
     const session = getCurrentSession();
-    if (session && session.user.login === "AdminHusan") {
+    const ADMIN_LOGIN = import.meta.env.VITE_ADMIN_LOGIN;
+    if (session && ADMIN_LOGIN && session.user.login === ADMIN_LOGIN) {
       return { 
         valid: true, 
         user: session.user, 
