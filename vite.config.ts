@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: {
-          'face-api': ['face-api.js'],
+          'face-api': ['@vladmandic/face-api'],
           'vendor': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
         },
       },
