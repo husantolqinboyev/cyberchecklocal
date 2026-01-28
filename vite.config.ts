@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icon-192x192.png', 'icon-512x512.png'],
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB gacha ruxsat berish
+      },
       manifest: {
         name: 'Salaam App',
         short_name: 'Salaam',
@@ -45,5 +48,16 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'face-api': ['face-api.js'],
+          'vendor': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
   },
 }));
