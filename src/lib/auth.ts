@@ -3,6 +3,7 @@ import DOMPurify from "dompurify";
 export interface User {
   id: string;
   login: string;
+  email?: string;
   full_name: string;
   role: "admin" | "teacher" | "student";
   is_active: boolean;
@@ -446,41 +447,6 @@ export async function login(
   }
 
   try {
-    // Maxsus Admin logini (Environment Variables orqali)
-    const ADMIN_LOGIN = import.meta.env.VITE_ADMIN_LOGIN;
-    const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
-
-    // Debug log (faqat ishlab chiqishda yoki xatolikni aniqlash uchun)
-    if (!ADMIN_LOGIN || !ADMIN_PASSWORD) {
-      console.warn("DIQQAT: VITE_ADMIN_LOGIN yoki VITE_ADMIN_PASSWORD o'rnatilmagan!");
-    }
-
-    if (ADMIN_LOGIN && ADMIN_PASSWORD && sanitizedLogin === ADMIN_LOGIN && sanitizedPassword === ADMIN_PASSWORD) {
-      const adminUser: User = {
-        id: "admin-husan-id",
-        login: ADMIN_LOGIN,
-        full_name: "Husan Tolqinboyev",
-        role: "admin",
-        is_active: true
-      };
-
-      const adminSession: Session = {
-        token: "admin-static-token-" + generateToken(),
-        user: adminUser,
-        expires_at: new Date(Date.now() + 7 * 86400000).toISOString(), // 7 kun
-      };
-
-      saveSession(adminSession);
-      return { success: true, session: adminSession };
-    }
-
-    if (!SUPABASE_URL || SUPABASE_URL === "your_supabase_project_url") {
-      return { 
-        success: false, 
-        error: "Supabase sozlamalari noto'g'ri. Iltimos, Vercel'da VITE_SUPABASE_URL ni o'rnating." 
-      };
-    }
-
     const response = await secureFetch(`${SUPABASE_URL}/functions/v1/auth/login`, {
       method: "POST",
       body: JSON.stringify({
@@ -492,11 +458,15 @@ export async function login(
       }),
     });
 
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-      return { success: false, error: result.error || "Login xatosi" };
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { 
+        success: false, 
+        error: errorData.error || `Server xatosi: ${response.status}` 
+      };
     }
+
+    const result = await response.json();
 
     // Check browser compatibility after getting role
     if (!isAllowedBrowser(result.user.role)) {
@@ -526,7 +496,13 @@ export async function login(
     return { success: true, session };
   } catch (error) {
     console.error("Login error:", error);
-    return { success: false, error: "Tizim xatosi" };
+    if (error instanceof TypeError && error.message === "Failed to fetch") {
+      return { 
+        success: false, 
+        error: "Serverga ulanib bo'lmadi. Internet aloqasini yoki Edge Function holatini tekshiring." 
+      };
+    }
+    return { success: false, error: "Tizim xatosi: " + (error instanceof Error ? error.message : "Noma'lum") };
   }
 }
 
@@ -554,48 +530,29 @@ export async function validateSession(): Promise<{ valid: boolean; user?: User; 
     return { valid: false };
   }
 
-  // Admin uchun sessiyani validatsiya qilish
-  if (token.startsWith("admin-static-token-")) {
-    const session = getCurrentSession();
-    const ADMIN_LOGIN = import.meta.env.VITE_ADMIN_LOGIN;
-    if (session && ADMIN_LOGIN && session.user.login === ADMIN_LOGIN) {
-      return { 
-        valid: true, 
-        user: session.user, 
-        expires_at: session.expires_at 
-      };
-    }
-  }
-  
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/auth/validate`, {
+    const response = await secureFetch(`${SUPABASE_URL}/functions/v1/auth/validate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
     });
 
     const result = await response.json();
-
-    if (!result.valid) {
+    if (!response.ok || !result.valid) {
       clearSession();
       return { valid: false };
     }
 
-    // Update local session with server data
-    const session: Session = {
-      token,
-      user: result.user,
-      expires_at: result.expires_at,
+    return { 
+      valid: true, 
+      user: result.user, 
+      expires_at: result.expires_at 
     };
-    saveSession(session);
-
-    return { valid: true, user: result.user, expires_at: result.expires_at };
   } catch (error) {
     console.error("Session validation error:", error);
-    // Fall back to localStorage if server is unreachable
-    const localSession = getCurrentSession();
-    if (localSession) {
-      return { valid: true, user: localSession.user, expires_at: localSession.expires_at };
+    // Offline mode or network error - trust local session if it exists
+    const session = getCurrentSession();
+    if (session && new Date(session.expires_at) > new Date()) {
+      return { valid: true, user: session.user, expires_at: session.expires_at };
     }
     return { valid: false };
   }
