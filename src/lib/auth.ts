@@ -21,6 +21,12 @@ const TOKEN_KEY = "cybercheck_token";
 const REFRESH_TOKEN_KEY = "cybercheck_refresh_token";
 const CSRF_TOKEN_KEY = "cybercheck_csrf_token";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Debugging
+if (import.meta.env.DEV) {
+  console.log("Supabase URL:", SUPABASE_URL);
+}
 
 // Secure cookie functions for enhanced security
 export function setSecureCookie(name: string, value: string, days: number = 1) {
@@ -61,23 +67,47 @@ export function getCSRFToken(): string {
 
 // Secure fetch wrapper with CSRF protection
 export async function secureFetch(url: string, options: RequestInit = {}) {
-  const headers = {
-    'X-XSRF-TOKEN': getCSRFToken(),
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...((options.headers as Record<string, string>) || {}),
   };
 
-  const response = await fetch(url, { ...options, headers });
-  
-  // Auto-refresh token on 401
-  if (response.status === 401) {
-    const newToken = await refreshAccessToken();
-    if (newToken) {
-      return secureFetch(url, options);
-    }
+  // Supabase auth headers
+  if (SUPABASE_ANON_KEY) {
+    headers['apikey'] = SUPABASE_ANON_KEY;
+    headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
   }
-  
-  return response;
+
+  // Add CSRF token for non-GET requests
+  if (options.method && options.method !== 'GET') {
+    headers['X-XSRF-TOKEN'] = getCSRFToken();
+  }
+
+  try {
+    const response = await fetch(url, { ...options, headers });
+    
+    // Auto-refresh token on 401
+    if (response.status === 401) {
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        // Update authorization header with new token if it was a user session
+        const session = getCurrentSession();
+        if (session) {
+          headers['Authorization'] = `Bearer ${session.token}`;
+        }
+        return fetch(url, { ...options, headers });
+      }
+    }
+    
+    return response;
+  } catch (error) {
+    console.error("Fetch error details:", {
+      url,
+      method: options.method,
+      error: error instanceof Error ? error.message : error
+    });
+    throw error;
+  }
 }
 
 // XSS Protection - Sanitize all inputs
