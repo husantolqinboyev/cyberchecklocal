@@ -450,10 +450,15 @@ export async function login(
     const ADMIN_LOGIN = import.meta.env.VITE_ADMIN_LOGIN;
     const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 
+    // Debug log (faqat ishlab chiqishda yoki xatolikni aniqlash uchun)
+    if (!ADMIN_LOGIN || !ADMIN_PASSWORD) {
+      console.warn("DIQQAT: VITE_ADMIN_LOGIN yoki VITE_ADMIN_PASSWORD o'rnatilmagan!");
+    }
+
     if (ADMIN_LOGIN && ADMIN_PASSWORD && sanitizedLogin === ADMIN_LOGIN && sanitizedPassword === ADMIN_PASSWORD) {
       const adminUser: User = {
         id: "admin-husan-id",
-        login: "AdminHusan",
+        login: ADMIN_LOGIN,
         full_name: "Husan Tolqinboyev",
         role: "admin",
         is_active: true
@@ -467,6 +472,13 @@ export async function login(
 
       saveSession(adminSession);
       return { success: true, session: adminSession };
+    }
+
+    if (!SUPABASE_URL || SUPABASE_URL === "your_supabase_project_url") {
+      return { 
+        success: false, 
+        error: "Supabase sozlamalari noto'g'ri. Iltimos, Vercel'da VITE_SUPABASE_URL ni o'rnating." 
+      };
     }
 
     const response = await secureFetch(`${SUPABASE_URL}/functions/v1/auth/login`, {
