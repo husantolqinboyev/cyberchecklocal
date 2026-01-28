@@ -5,6 +5,7 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
+// Last updated: 2026-01-28
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
