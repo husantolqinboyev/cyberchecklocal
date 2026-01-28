@@ -30,11 +30,11 @@
 
 ### 📦 Kerakli Environment Variables
 
-`.env.local` faylini yaratish:
+`.env.local` faylini yaratish va Vercel dashboard'da ushbu o'zgaruvchilarni qo'shish:
 
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
 VITE_APP_URL=your_vercel_app_url
 ```
 
