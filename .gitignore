@@ -1,0 +1,59 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Security sensitive files
+*.key
+*.pem
+*.cert
+*.crt
+*.pfx
+
+# Supabase local files
+.supabase
+
+# OS generated files
+Thumbs.db
+
+# Debug files
+*.tgz
+
+# Coverage directory
+coverage/
+
+# Lock files (keep only one)
+yarn.lock
+package-lock.json
+
+# Temporary files
+.tmp/
+temp/
